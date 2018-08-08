@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from pandas.tseries.frequencies import to_offset
 
@@ -88,3 +89,17 @@ def unfold_time_serie(serie, d_max, drop_boundaries=False):
 	unfolded.columns = colnames
 	
 	return unfolded
+
+
+def make_sliding_window(market, sequence_size):
+
+	"""
+	Convert a market dataframe to a 3-dimensional numpy array containing sliding windows of specified size
+	"""
+
+	market = market.values
+	seq = sequence_size
+	s0, s1 = market.strides
+	points, features = market.shape
+
+	return np.lib.stride_tricks.as_strided(market, shape=(points - seq + 1, seq, features), strides=(s0, s0, s1)).copy()
