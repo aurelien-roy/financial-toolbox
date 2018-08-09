@@ -34,22 +34,30 @@ def downscale_market(market, freq):
 	return resampled_market
 
 
-def add_variation(market):
-	market['variation'] = market['close'] / market['open']
+def add_variation(market, begin=-1, end=0, column='close'):
 
-	return market
+	"""
+	Add a variation column to the market dataframe. The variation is the ratio between prices at different times.
+	By default, the variation is calculated on close prices, from N-1 to N.
+
+	More candles can be included by setting the begin and end value. Theses values are differences between the
+	current timeslot and the one to be considered.
+
+	For example, setting begin to 0 and end to 2 will produce the variation between the close prices at N and N+2.
+	"""
+
+	if begin >= end:
+		raise ValueError('begin tick must preceed than end tick')
+
+	c_name = 'var_' + label_time_diff(begin) + "_" + label_time_diff(end)
+	shift_begin = market.shift(-begin)
+	shift_end = market.shift(-end)
+
+	market[c_name] = shift_end[column] / shift_begin[column]
 
 
-def add_label(market, buy_threshold=1.002, sold_threshold=0.998):
-
-	if 'variation' not in market:
-		add_variation(market)
-
-	serie = market['variation']
-
-	market['label'] = serie.apply(lambda p: 'B' if p >= buy_threshold else 'S' if p <= sold_threshold else 'H')
-
-	return market
+def label(serie, buy_threshold=1.002, sold_threshold=0.998):
+	return serie.apply(lambda p: 'B' if p >= buy_threshold else 'S' if p <= sold_threshold else 'H')
 
 
 def unfold_time_serie(serie, d_max, drop_boundaries=False):
@@ -69,13 +77,7 @@ def unfold_time_serie(serie, d_max, drop_boundaries=False):
 	for i in range(0, (val * d_max)+1):
 		cols.append(serie)
 		serie = serie.shift(-val)
-        
-		name = 'N'
-        
-		if i != 0:
-			name += sign + str(i)
-        
-		colnames.append(name)
+		colnames.append(label_time_diff(val * i))
 
 	unfolded = pd.concat(cols, axis=1)
     
@@ -89,6 +91,17 @@ def unfold_time_serie(serie, d_max, drop_boundaries=False):
 	unfolded.columns = colnames
 	
 	return unfolded
+
+
+def label_time_diff(d):
+
+	if not isinstance(d, int):
+		raise ValueError('d must be an integer')
+
+	label = 'N'
+	if d != 0:
+		label += str(d)
+	return label
 
 
 def make_sliding_window(market, sequence_size):
