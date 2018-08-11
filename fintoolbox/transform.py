@@ -56,6 +56,37 @@ def add_variation(market, begin=-1, end=0, column='close'):
 	market[c_name] = shift_end[column] / shift_begin[column]
 
 
+def strongest_variation(serie, delta):
+	"""
+	For each timestamp, the function associates the strongest variation observed from N to any timestamp between N+1 and N+d_max (or inversely if d_max is negative)
+	"""
+
+	if delta == 0:
+		return serie
+
+	unit = 1 if delta > 0 else -1
+	delta = abs(delta)
+
+	variations = pd.Series(np.repeat(0, serie.size), index=serie.index)
+
+	while delta > 0:
+		sv = serie.shift(-delta*unit)
+		if unit > 0:
+			sv = sv / serie
+		else:
+			sv = serie / sv
+
+		sv -= 1
+
+		maxabs = lambda x: max(x.min(), x.max(), key=abs)
+		variations = pd.concat([variations, sv], axis=1).apply(maxabs, axis=1)
+
+		delta -= 1
+
+	return variations+1
+
+
+
 def label(serie, buy_threshold=1.002, sold_threshold=0.998):
 	return serie.apply(lambda p: 'B' if p >= buy_threshold else 'S' if p <= sold_threshold else 'H')
 
@@ -100,6 +131,8 @@ def label_time_diff(d):
 
 	label = 'N'
 	if d != 0:
+		if d > 0:
+			label += '+'
 		label += str(d)
 	return label
 
