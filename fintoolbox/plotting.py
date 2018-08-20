@@ -18,11 +18,9 @@ def plot_candles(market, width=40, height=50, plot_volume=True):
         else:
             raise ValueError('Unable to find volume column on dataframe. Try to set plot_volume to False')
 
-
     # Data preparation
     ohlc = market[cols]
     ohlc.insert(0, 'time', plot_index)
-
 
     # Figure initialization
     fig, ax1 = plt.subplots(figsize=(width, height))
