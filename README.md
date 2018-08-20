@@ -72,7 +72,7 @@ ft.transform.add_variation(market_2d, -3, 0)
 market_2d.head()
 ```
 
-```python
+```
                 open      high       low    close   ...   var_N_N+1  var_N-3_N
 time                                                                                  
 2017-10-31  0.050000  0.050435  0.042800  0.04286   ...    0.993934        NaN
@@ -82,9 +82,9 @@ time
 2017-11-08  0.041000  0.046174  0.038119  0.04486   ...    1.105325   1.053050
 ```
 
-## Plotting
+## Plotting candlesticks
 
-Prices and volumes can be plotted with Matplotlib with a single line of code :
+Prices candlesticks and volume bars can be plotted using Matplotlib with a single line of code :
 
 ```python
 import fintoolbox.plotting
