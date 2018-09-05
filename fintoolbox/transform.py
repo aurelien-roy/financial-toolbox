@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import numbers
 
 
 def downscale_market(market, freq):
@@ -33,7 +34,7 @@ def downscale_market(market, freq):
     return resampled_market
 
 
-def add_variation(market, begin=-1, end=0, column='close'):
+def add_variation(market, begin=-1, end=0, column='close', fillna=False):
     """
     Add a variation column to the market dataframe. The variation is the ratio between prices at different times.
     By default, the variation is calculated on close prices, from N-1 to N.
@@ -52,6 +53,9 @@ def add_variation(market, begin=-1, end=0, column='close'):
     shift_end = market.shift(-end)
 
     market[c_name] = shift_end[column] / shift_begin[column]
+
+    if fillna:
+        market[c_name].fillna(1, inplace=True)
 
 
 def strongest_variation(serie, delta):
@@ -86,6 +90,8 @@ def strongest_variation(serie, delta):
 
 def label(serie, buy_threshold=1.002, sold_threshold=0.998):
     return serie.apply(lambda p: 'B' if p >= buy_threshold else 'S' if p <= sold_threshold else 'H')
+
+
 
 
 def unfold_time_serie(serie, d_max, drop_boundaries=False):
@@ -134,7 +140,7 @@ def label_time_diff(d):
 
 def make_sliding_window(market, sequence_size):
     """
-    Convert a market dataframe to a 3-dimensional numpy array containing sliding windows of specified size
+    Converts a market dataframe to a 3-dimensional numpy array containing sliding windows of specified size
     """
 
     market = market.values
@@ -143,3 +149,46 @@ def make_sliding_window(market, sequence_size):
     points, features = market.shape
 
     return np.lib.stride_tricks.as_strided(market, shape=(points - seq + 1, seq, features), strides=(s0, s0, s1)).copy()
+
+
+def binary_trend(variation, neutral='B'):
+    """
+    Converts a value, a serie or a ndarray of variations, to a binary modality (either B for Buy when variation is greather than 1 or S otherwise).
+    """
+    return trend(variation, 1, 1, hold_symbol=neutral)
+
+
+def trend(variation, hold_lower_bound=0.99, hold_upper_bound=1.01, buy_symbol='B', sell_symbol='S', hold_symbol='H'):
+    """
+    Converts a value, a serie or a ndarray of variations to a modality (either B, S or H). Boundaries can be set with hold_lower_bound and hold_upper_bound.
+    """
+
+    if isinstance(variation, numbers.Number):
+
+        if variation <= 0:
+            raise ValueError('Variations must be positive numbers.')
+
+        if np.isnan(variation):
+            return None
+
+        if variation < hold_lower_bound:
+            return sell_symbol
+        elif variation > hold_upper_bound:
+            return buy_symbol
+        else:
+            return hold_symbol
+
+    args = locals()
+    del args['variation']
+
+    if isinstance(variation, pd.Series):
+        return variation.map(lambda v: trend(v, **args))
+
+    if isinstance(variation, np.ndarray):
+        return np.vectorize(trend)(variation, **args)
+
+    raise ValueError('Unsupported type for variation (must be a number, a ndarray or pandas Series).')
+
+    
+
+
